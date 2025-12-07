@@ -12,6 +12,8 @@ import { LogPanel } from '@/components/visualizer/LogPanel';
 import { AlgorithmInfo } from '@/components/visualizer/AlgorithmInfo';
 import { InputPanel } from '@/components/visualizer/InputPanel';
 import { GraphInputPanel } from '@/components/visualizer/GraphInputPanel';
+import { FibonacciInputPanel } from '@/components/visualizer/FibonacciInputPanel';
+import { NQueensInputPanel } from '@/components/visualizer/NQueensInputPanel';
 import { LanguageTabs } from '@/components/visualizer/LanguageTabs';
 import { useVisualizationEngine } from '@/hooks/useVisualizationEngine';
 import { getAlgorithmById, getCategoryById } from '@/algorithms/config';
@@ -184,6 +186,16 @@ export default function AlgorithmVisualizer() {
             <GraphInputPanel 
               onInputChange={handleInputChange} 
               currentInput={currentInput as GraphInput}
+            />
+          ) : id === 'fibonacci' ? (
+            <FibonacciInputPanel 
+              onInputChange={handleInputChange} 
+              currentInput={currentInput as FibonacciInput}
+            />
+          ) : id === 'n-queens' ? (
+            <NQueensInputPanel 
+              onInputChange={handleInputChange} 
+              currentInput={currentInput as NQueensInput}
             />
           ) : (
             <InputPanel type={inputType} onInputChange={handleInputChange} />

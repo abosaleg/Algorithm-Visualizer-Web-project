@@ -177,7 +177,7 @@ export const algorithms: AlgorithmDefinition[] = [
   // Backtracking
   {
     id: 'n-queens',
-    name: 'N-Queens',
+    name: 'N-Queens Problem',
     category: 'backtracking',
     route: '/algorithms/backtracking/n-queens',
     description: 'Place N queens on an N×N chessboard so no two queens attack each other.',
@@ -191,10 +191,10 @@ export const algorithms: AlgorithmDefinition[] = [
   // Dynamic Programming
   {
     id: 'fibonacci',
-    name: 'Fibonacci (DP)',
+    name: 'Fibonacci Sequence (DP)',
     category: 'dynamic-programming',
     route: '/algorithms/dynamic-programming/fibonacci',
-    description: 'Compute Fibonacci numbers using memoization.',
+    description: 'Compute Fibonacci numbers using dynamic programming with adaptive visualization modes.',
     tags: ['memoization', 'optimization'],
     complexity: {
       time: { average: 'O(n)', worst: 'O(n)' },

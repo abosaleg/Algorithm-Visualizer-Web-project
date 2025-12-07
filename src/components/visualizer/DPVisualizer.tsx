@@ -8,31 +8,63 @@ interface DPVisualizerProps {
 }
 
 export function DPVisualizer({ currentStep, className }: DPVisualizerProps) {
-  const { dp, n, currentIndex, result, prev1Index, prev2Index } = useMemo(() => {
+  const { dp, n, currentIndex, result, prev1Index, prev2Index, mode, strategy, warning } = useMemo(() => {
     if (!currentStep) {
       return {
-        dp: [] as number[],
+        dp: [] as (number | string)[],
         n: 0,
         currentIndex: -1,
         result: -1,
         prev1Index: -1,
         prev2Index: -1,
+        mode: 'full' as string,
+        strategy: 'dp-array' as string,
+        warning: undefined as string | undefined,
       };
     }
 
     const payload = currentStep.payload as Record<string, unknown>;
-    const dpTable = (payload.dp as number[]) || [];
+    const dpTable = (payload.dp as (number | string)[]) || [];
     const i = (payload.i as number) ?? -1;
+    const resultValue = payload.result;
 
     return {
       dp: dpTable,
       n: (payload.n as number) || 0,
       currentIndex: i,
-      result: (payload.result as number) ?? -1,
+      result: typeof resultValue === 'string' ? resultValue : (resultValue as number) ?? -1,
       prev1Index: i >= 2 ? i - 1 : -1,
       prev2Index: i >= 2 ? i - 2 : -1,
+      mode: (payload.mode as string) || 'full',
+      strategy: (payload.strategy as string) || 'dp-array',
+      warning: (payload.warning as string) || undefined,
     };
   }, [currentStep]);
+
+  const isComplete = currentStep?.kind === 'complete';
+  const isComputationOnly = mode === 'computation-only';
+  const isComputeStart = currentStep?.kind === 'compute-start';
+
+  // Show computation-only message
+  if (isComputationOnly || isComputeStart) {
+    return (
+      <div className={cn('glass-panel p-4', className)}>
+        <div className="h-full flex flex-col items-center justify-center gap-4">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-foreground">
+              Computing Fibonacci({n})
+            </h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Using {strategy} algorithm
+            </p>
+            {warning && (
+              <p className="text-xs text-warning mt-2">{warning}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (dp.length === 0) {
     return (
@@ -41,8 +73,6 @@ export function DPVisualizer({ currentStep, className }: DPVisualizerProps) {
       </div>
     );
   }
-
-  const isComplete = currentStep?.kind === 'complete';
 
   return (
     <div className={cn('glass-panel p-4', className)}>
@@ -127,8 +157,8 @@ export function DPVisualizer({ currentStep, className }: DPVisualizerProps) {
         {/* Result display */}
         {isComplete && (
           <div className="text-center p-4 bg-success/20 rounded-lg border border-success">
-            <p className="text-lg font-bold text-success">
-              Fibonacci({n}) = {result}
+            <p className="text-lg font-bold text-success break-all">
+              Fibonacci({n}) = {typeof result === 'string' ? result : result.toString()}
             </p>
           </div>
         )}
