@@ -1,0 +1,207 @@
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { CodePanel } from '@/components/visualizer/CodePanel';
+import { ArrayVisualizer } from '@/components/visualizer/ArrayVisualizer';
+import { GraphVisualizer } from '@/components/visualizer/GraphVisualizer';
+import { GridVisualizer } from '@/components/visualizer/GridVisualizer';
+import { DPVisualizer } from '@/components/visualizer/DPVisualizer';
+import { ControlPanel } from '@/components/visualizer/ControlPanel';
+import { LogPanel } from '@/components/visualizer/LogPanel';
+import { AlgorithmInfo } from '@/components/visualizer/AlgorithmInfo';
+import { InputPanel } from '@/components/visualizer/InputPanel';
+import { GraphInputPanel } from '@/components/visualizer/GraphInputPanel';
+import { LanguageTabs } from '@/components/visualizer/LanguageTabs';
+import { useVisualizationEngine } from '@/hooks/useVisualizationEngine';
+import { getAlgorithmById, getCategoryById } from '@/algorithms/config';
+import { bubbleSortCode, selectionSortCode, quickSortCode, insertionSortCode, mergeSortCode } from '@/algorithms/code/sorting';
+import { linearSearchCode, binarySearchCode } from '@/algorithms/code/searching';
+import { bfsCode, dfsCode } from '@/algorithms/code/graph';
+import { nQueensCode } from '@/algorithms/code/backtracking';
+import { fibonacciCode } from '@/algorithms/code/dynamic';
+import { bubbleSortRunner, selectionSortRunner, quickSortRunner, insertionSortRunner, mergeSortRunner, SortingInput } from '@/algorithms/runners/sorting';
+import { linearSearchRunner, binarySearchRunner, SearchingInput } from '@/algorithms/runners/searching';
+import { bfsRunner, dfsRunner, GraphInput } from '@/algorithms/runners/graph';
+import { nQueensRunner, NQueensInput } from '@/algorithms/runners/backtracking';
+import { fibonacciRunner, FibonacciInput } from '@/algorithms/runners/dynamic';
+import { VisualizationStep, AlgorithmCode, AlgorithmRunner } from '@/types/algorithm';
+import { cn } from '@/lib/utils';
+
+type AnyInput = SortingInput | SearchingInput | GraphInput | NQueensInput | FibonacciInput;
+
+const algorithmCodeMap: Record<string, Record<string, AlgorithmCode>> = {
+  'bubble-sort': bubbleSortCode,
+  'selection-sort': selectionSortCode,
+  'insertion-sort': insertionSortCode,
+  'merge-sort': mergeSortCode,
+  'quick-sort': quickSortCode,
+  'linear-search': linearSearchCode,
+  'binary-search': binarySearchCode,
+  'bfs': bfsCode,
+  'dfs': dfsCode,
+  'n-queens': nQueensCode,
+  'fibonacci': fibonacciCode,
+};
+
+const algorithmRunnerMap: Record<string, AlgorithmRunner<AnyInput>> = {
+  'bubble-sort': bubbleSortRunner as AlgorithmRunner<AnyInput>,
+  'selection-sort': selectionSortRunner as AlgorithmRunner<AnyInput>,
+  'insertion-sort': insertionSortRunner as AlgorithmRunner<AnyInput>,
+  'merge-sort': mergeSortRunner as AlgorithmRunner<AnyInput>,
+  'quick-sort': quickSortRunner as AlgorithmRunner<AnyInput>,
+  'linear-search': linearSearchRunner as AlgorithmRunner<AnyInput>,
+  'binary-search': binarySearchRunner as AlgorithmRunner<AnyInput>,
+  'bfs': bfsRunner as AlgorithmRunner<AnyInput>,
+  'dfs': dfsRunner as AlgorithmRunner<AnyInput>,
+  'n-queens': nQueensRunner as AlgorithmRunner<AnyInput>,
+  'fibonacci': fibonacciRunner as AlgorithmRunner<AnyInput>,
+};
+
+const getVisualizerType = (category: string, id: string): 'array' | 'graph' | 'grid' | 'dp' => {
+  if (category === 'graph') return 'graph';
+  if (category === 'backtracking') return 'grid';
+  if (category === 'dynamic-programming') return 'dp';
+  return 'array';
+};
+
+export default function AlgorithmVisualizer() {
+  const { category, id } = useParams<{ category: string; id: string }>();
+  const [selectedLanguage, setSelectedLanguage] = useState('javascript');
+  const [steps, setSteps] = useState<VisualizationStep[]>([]);
+  const [currentInput, setCurrentInput] = useState<Record<string, unknown>>({});
+
+  const algorithm = useMemo(() => getAlgorithmById(id || ''), [id]);
+  const categoryInfo = useMemo(() => getCategoryById(category || ''), [category]);
+  const codeMap = useMemo(() => algorithmCodeMap[id || ''] || {}, [id]);
+  const runner = useMemo(() => algorithmRunnerMap[id || ''], [id]);
+  const visualizerType = useMemo(() => getVisualizerType(category || '', id || ''), [category, id]);
+
+  useEffect(() => {
+    if (runner) {
+      const initialInput = runner.getInitialInput();
+      setCurrentInput(initialInput as unknown as Record<string, unknown>);
+      const generatedSteps = runner.generateSteps(initialInput);
+      setSteps(generatedSteps);
+    }
+  }, [runner]);
+
+  const handleInputChange = useCallback((input: Record<string, unknown>) => {
+    if (runner) {
+      setCurrentInput(input);
+      const generatedSteps = runner.generateSteps(input as AnyInput);
+      setSteps(generatedSteps);
+    }
+  }, [runner]);
+
+  const {
+    currentStep,
+    executionState,
+    speed,
+    logs,
+    run,
+    pause,
+    step,
+    reset,
+    setSpeed,
+    progress,
+  } = useVisualizationEngine({ steps });
+
+  const currentCode: AlgorithmCode = useMemo(() => {
+    return codeMap[selectedLanguage] || codeMap['javascript'] || codeMap['pseudocode'] || { language: 'pseudocode' as const, lines: ['// Algorithm implementation'] };
+  }, [codeMap, selectedLanguage]);
+
+  const availableLanguages = useMemo(() => Object.keys(codeMap), [codeMap]);
+
+  // Create a preview step for graph algorithms when there's no current step
+  const graphPreviewStep = useMemo(() => {
+    if (visualizerType === 'graph' && !currentStep && currentInput) {
+      const graphInput = currentInput as GraphInput;
+      if (graphInput.nodes && graphInput.nodes.length > 0) {
+        return {
+          kind: 'init' as const,
+          payload: { 
+            nodes: graphInput.nodes, 
+            edges: graphInput.edges || [], 
+            startNode: graphInput.startNode 
+          },
+          codeLine: 0,
+          description: 'Graph preview',
+        };
+      }
+    }
+    return null;
+  }, [visualizerType, currentStep, currentInput]);
+
+  if (!algorithm) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center glass-panel p-8">
+          <h2 className="text-2xl font-bold mb-2 text-foreground">Algorithm Not Found</h2>
+          <p className="text-muted-foreground mb-4">The requested algorithm could not be found.</p>
+          <Link to="/algorithms" className="text-primary hover:underline">Browse all algorithms</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const inputType = category === 'searching' ? 'searching' : category === 'graph' ? 'graph' : category === 'backtracking' ? 'nqueens' : category === 'dynamic-programming' ? 'fibonacci' : 'sorting';
+
+  return (
+    <div className="min-h-screen p-4 lg:p-6">
+      <header className="mb-6">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
+          <ChevronRight className="h-4 w-4" />
+          <Link to="/algorithms" className="hover:text-foreground transition-colors">Algorithms</Link>
+          <ChevronRight className="h-4 w-4" />
+          {categoryInfo && (
+            <>
+              <span className="text-foreground capitalize">{categoryInfo.name}</span>
+              <ChevronRight className="h-4 w-4" />
+            </>
+          )}
+          <span className="text-primary">{algorithm.name}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{algorithm.name}</h1>
+          <div className="flex gap-2">
+            <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/30">{algorithm.complexity.time.average}</Badge>
+            <Badge variant="outline" className="bg-info/10 text-info border-info/30">{algorithm.complexity.space}</Badge>
+          </div>
+        </div>
+        <p className="text-muted-foreground mt-2">{algorithm.description}</p>
+      </header>
+
+      <div className="mb-4">
+        <LanguageTabs languages={availableLanguages} activeLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+        <div className="space-y-4">
+          <CodePanel code={currentCode} highlightedLine={currentStep?.codeLine} className="h-[400px]" />
+          {visualizerType === 'graph' ? (
+            <GraphInputPanel 
+              onInputChange={handleInputChange} 
+              currentInput={currentInput as GraphInput}
+            />
+          ) : (
+            <InputPanel type={inputType} onInputChange={handleInputChange} />
+          )}
+        </div>
+        <div className="space-y-4">
+          {visualizerType === 'array' && <ArrayVisualizer currentStep={currentStep} className="h-[300px]" />}
+          {visualizerType === 'graph' && <GraphVisualizer currentStep={currentStep || graphPreviewStep} className="h-[300px]" />}
+          {visualizerType === 'grid' && <GridVisualizer currentStep={currentStep} className="h-[300px]" />}
+          {visualizerType === 'dp' && <DPVisualizer currentStep={currentStep} className="h-[300px]" />}
+          <ControlPanel executionState={executionState} speed={speed} progress={progress} onRun={run} onPause={pause} onStep={step} onReset={reset} onSpeedChange={setSpeed} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-6">
+        <LogPanel logs={logs} className="h-[200px]" />
+        <AlgorithmInfo algorithm={algorithm} />
+      </div>
+    </div>
+  );
+}

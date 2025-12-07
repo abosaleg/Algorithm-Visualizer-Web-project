@@ -1,52 +1,60 @@
-// Algorithm types and interfaces
-export interface AlgorithmStep {
-  id: number;
-  description: string;
-  data: any;
-  highlight?: number[];
-  isValid?: boolean;
+export type AlgorithmCategory = 
+  | 'sorting' 
+  | 'searching' 
+  | 'graph' 
+  | 'data-structures'
+  | 'backtracking' 
+  | 'dynamic-programming' 
+  | 'other';
+
+export interface AlgorithmComplexity {
+  time: {
+    best?: string;
+    average: string;
+    worst: string;
+  };
+  space: string;
 }
 
-export interface AlgorithmResult {
-  success: boolean;
-  message: string;
-  timeComplexity: string;
-  spaceComplexity: string;
-  iterations: number;
-  finalValue?: any;
+export interface AlgorithmCode {
+  language: 'javascript' | 'python' | 'cpp' | 'pseudocode';
+  lines: string[];
 }
 
-export interface AlgorithmConfig {
+export interface AlgorithmDefinition {
   id: string;
   name: string;
   category: AlgorithmCategory;
+  route: string;
   description: string;
-  timeComplexity: string;
-  spaceComplexity: string;
-  pseudocode: string[];
-  useCases: string[];
+  longDescription?: string;
+  tags: string[];
+  complexity: AlgorithmComplexity;
+  supportedLanguages: ('javascript' | 'python' | 'cpp' | 'pseudocode')[];
+  useCases?: string[];
 }
 
-export type AlgorithmCategory = 
-  | 'divide-conquer' 
-  | 'greedy' 
-  | 'dynamic-programming' 
-  | 'backtracking';
-
-export type PlaybackSpeed = 'slow' | 'medium' | 'fast';
-
-export interface VisualizationState {
-  isPlaying: boolean;
-  isPaused: boolean;
-  currentStep: number;
-  totalSteps: number;
-  speed: PlaybackSpeed;
-  steps: AlgorithmStep[];
-  result: AlgorithmResult | null;
+export interface VisualizationStep {
+  kind: string;
+  payload: Record<string, unknown>;
+  codeLine?: number;
+  description?: string;
+  delayMs?: number;
 }
 
-export const SPEED_MAP: Record<PlaybackSpeed, number> = {
-  slow: 1500,
-  medium: 800,
-  fast: 300,
-};
+export interface AlgorithmRunner<TInput = unknown> {
+  getInitialInput: () => TInput;
+  generateSteps: (input: TInput) => VisualizationStep[];
+  validateInput?: (input: TInput) => { valid: boolean; error?: string };
+}
+
+export interface CategoryInfo {
+  id: AlgorithmCategory;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+}
+
+export type ExecutionState = 'idle' | 'running' | 'paused' | 'completed';
+export type ExecutionSpeed = 'slow' | 'normal' | 'fast';
